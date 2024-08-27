@@ -10,6 +10,8 @@ datatype t = T of { language : (string option)
                   };
 type Metadata = t;
 
+exception Runaway of string;
+
 fun is_blank (s : substring) =
   CharVectorSlice.all (Char.isSpace) s;
 
@@ -29,6 +31,15 @@ fun parse_language (s : substring) idx =
     else (Substring.string lang, false)
   end;
 
+fun trim_substr_leading s =
+  Substring.dropl Char.isSpace s;
+
+fun trim_substr_trailing s =
+  Substring.dropr Char.isSpace s;
+
+fun trim_substr s =
+  trim_substr_trailing (trim_substr_leading s);
+
 (* extract_kvs : substring -> int -> ((key * value) list) * int
 *)
 
@@ -36,7 +47,12 @@ fun extract_kvs s start =
   let
     val len = Substring.size s;
     fun extract_entry i =
-      if len <= i then (Substring.full "", len)
+      if len <= i
+      then (if not (Substring.isSuffix "}" s)
+            then raise Runaway "Runaway key-value metadata in code block"
+            else (Substring.full "", len))
+      else if Char.isSpace (Substring.sub(s,i))
+      then extract_entry (i + 1)
       else if #"'" = Substring.sub(s,i)
       then (case CharVectorSlice.findi (fn (j,c) =>
                                            j > i andalso
@@ -64,17 +80,22 @@ fun extract_kvs s start =
                                             #"," = c orelse
                                             #"}" = c))
                                        s of
-                NONE => (Substring.slice(s, i, NONE)
-                        , len)
+                NONE => (if not (Substring.isSuffix "}" s)
+                         then raise Runaway "Runaway key-value metadata in code block"
+                         else (Substring.slice(s, i, NONE)
+                              , len))
               | SOME (j,c) => (Substring.slice(s, i,
                                                   SOME((j - i)))
                               , j));
            
     fun extract_iter idx acc =
-      if (len <= idx) orelse (#"}" = Substring.sub(s,idx))
+      if (len <= idx) 
       then (acc, Int.min(idx + 1, len))
+      else if idx > 0 andalso (#"}" = Substring.sub(s,idx - 1))
+      then (acc, Int.min(idx, len))
       else let
-        val (entity,i) = extract_entry idx;
+        val (ent,i) = extract_entry idx;
+        val entity = trim_substr ent;
         val k = Substring.string entity;
       in
         if len > i andalso #"," = Substring.sub(s,i)
@@ -83,10 +104,16 @@ fun extract_kvs s start =
         then ((k, k)::acc, Int.min(i + 1, len))
         else if len > i andalso #"=" = Substring.sub(s,i)
         then let val (rhs,j) = extract_entry (i + 1);
-                 val v = Substring.string rhs;
-             in ((k,v)::acc, Int.min(j + 1, len))
+                 val v = (Substring.string o trim_substr) rhs;
+             in (case (CharVectorSlice.findi
+                           (fn (ix,ch) =>
+                               ix >= j andalso
+                               not (Char.isSpace ch))
+                           s) of
+                     SOME (j2,cc) => extract_iter (j2+1) ((k,v)::acc)
+                  | NONE => ((k,v)::acc, len - 1))
              end
-        else raise Fail (concat ["Runaway metadata starting at"
+        else raise Runaway (concat ["Runaway metadata starting at"
                                 , (Int.toString start)])
       end;
   in

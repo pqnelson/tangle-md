@@ -3,6 +3,7 @@ signature METADATA = sig
   type Metadata = t;
   type key = string;
   type value = string;
+  exception Runaway of string;
 
   val from_codefence_block : substring -> Metadata * substring;
   val language : Metadata -> string option;
