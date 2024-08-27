@@ -1,0 +1,5 @@
+$(SML_LIB)/basis/basis.mlb
+common.mlb
+../sml-xunit/xunit.mlb
+test/tangle_test.sml
+src/main.sml
