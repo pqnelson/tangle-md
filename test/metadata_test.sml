@@ -33,7 +33,10 @@ val extract_test2 =
                                    size "sml {file=example.sml}",
                                    NONE);
                in
-                 Assert.!! "EXPECTED true FOUND false"
+                 Assert.!! ("## EXPECTED: \""^
+                            (Substring.string expected)^
+                            "\"\n## FOUND: "^
+                            (Substring.string actual)^"\n")
                         (EQUAL = Substring.compare(expected, actual))
                end);
 

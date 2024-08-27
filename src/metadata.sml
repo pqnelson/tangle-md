@@ -46,6 +46,27 @@ fun trim_substr s =
 fun extract_kvs s start =
   let
     val len = Substring.size s;
+    fun end_quote i = (fn (j,c) =>
+                         j > i andalso
+                         #"\"" = c andalso
+                         #"\\" <> Substring.sub(s,j-1));
+    fun end_apostrophe i = (fn (j,c) =>
+                               j > i andalso
+                               #"'" = c);
+    fun end_delim i = if #"\"" = Substring.sub(s,i)
+                      then end_quote i
+                      else if #"'" = Substring.sub(s,i)
+                      then end_apostrophe i
+                      else (fn (j,c) =>
+                               j > i andalso
+                               (#"=" = c orelse
+                                #"," = c orelse
+                                #"}" = c));
+    fun delim_len i = if #"\"" = Substring.sub(s,i) orelse
+                         #"'" = Substring.sub(s,i)
+                      then 1
+                      else 0;
+                      
     fun extract_entry i =
       if len <= i
       then (if not (Substring.isSuffix "}" s)
@@ -53,41 +74,15 @@ fun extract_kvs s start =
             else (Substring.full "", len))
       else if Char.isSpace (Substring.sub(s,i))
       then extract_entry (i + 1)
-      else if #"'" = Substring.sub(s,i)
-      then (case CharVectorSlice.findi (fn (j,c) =>
-                                           j > i andalso
-                                           #"'" = c)
-                                       s of
-                NONE => (Substring.slice(s, i, NONE)
-                        , len)
-              | SOME (j,c) => (Substring.slice(s, i + 1,
-                                                  SOME((j - i) - 1))
-                              , j + 1))
-      else if #"\"" = Substring.sub(s,i)
-      then (case CharVectorSlice.findi (fn (j,c) =>
-                                           j > i andalso
-                                           #"\"" = c andalso
-                                           #"\\" <> Substring.sub(s,j-1))
-                                       s of
-                NONE => (Substring.slice(s, i, NONE)
-                        , len)
-              | SOME (j,c) => (Substring.slice(s, i + 1,
-                                                  SOME((j - i) - 1))
-                              , j + 1))
-      else (case CharVectorSlice.findi (fn (j,c) =>
-                                           j > i andalso
-                                           (#"=" = c orelse
-                                            #"," = c orelse
-                                            #"}" = c))
-                                       s of
-                NONE => (if not (Substring.isSuffix "}" s)
-                         then raise Runaway "Runaway key-value metadata in code block"
-                         else (Substring.slice(s, i, NONE)
-                              , len))
-              | SOME (j,c) => (Substring.slice(s, i,
-                                                  SOME((j - i)))
-                              , j));
-           
+      else (case CharVectorSlice.findi (end_delim i) s of
+                NONE => raise Runaway "Runaway key-value metadata in code block"
+              | SOME (j,c) => 
+                let
+                  val ell = delim_len i
+                in
+                  (Substring.slice(s, i + ell, SOME((j - i) - ell))
+                  , j + ell)
+                end);
     fun extract_iter idx acc =
       if (len <= idx) 
       then (acc, Int.min(idx + 1, len))
@@ -114,7 +109,7 @@ fun extract_kvs s start =
                   | NONE => ((k,v)::acc, len - 1))
              end
         else raise Runaway (concat ["Runaway metadata starting at"
-                                , (Int.toString start)])
+                                   , (Int.toString start)])
       end;
   in
     extract_iter start []
