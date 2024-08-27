@@ -12,21 +12,6 @@ WEB-like named code chunks are not supported.
 @date 2024 August 24
 @license MIT
 *)
-val ex1 = concat ["This is an example\n"
-                 ,"of some blah blah blah\n"
-                 ,"```sml\n"
-                 ,"fun has_language (s : substring) =\n"
-,"    Substring.size(s) > 0 andalso\n"
-,"    not (Char.isSpace (Substring.sub(s,0)));\n"
-,"```\n"
-,"\n"
-,"This function checks if there is a language\n"
-,"for the code block\n"
-,"And this is how we use it:\n"
-,"\n"
-,"```sml*\n"
-,"extract_src ex1;\n"
-,"```\n"];
 
 (*
 next_code_fence : string -> int -> int option

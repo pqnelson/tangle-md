@@ -1,2 +1,4 @@
 $(SML_LIB)/basis/basis.mlb
+src/metadata.sig
+src/metadata.sml
 src/tangle.sml
