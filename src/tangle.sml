@@ -89,66 +89,63 @@ fun gather_code (s : string) =
       gather_iter 0 init
     end;
 
-(*
-is_example_block : substring -> bool
+(* get_chunks : string -> Chunk.t list
 
-Example usage of code occurs within codefences delimited by 
-an asterisked language (e.g., `` ```sml* ``), if a language is
-present at all.
+Extract the chunks of code present in a string representing a
+Markdown file. This collects all codefenced blocks, extracts
+the metacode to accompany each Chunk object. *)
+fun get_chunks s =
+  let
+    val blocks = gather_code s;
+  in
+    map ((Chunk.from) o (Metadata.from_codefence_block)) blocks
+  end;
+
+(* form_src : string -> string
+
+For a string representing a Markdown file, produce a string
+consisting of all the code in the file.
  *)
-fun is_example_block (s : substring) =
-    case substring_next_newline s 0 of
-        NONE => false
-      | SOME i =>
-        (case CharVectorSlice.findi
-                  (fn (_,c) =>
-                      Char.isSpace c)
-                  (Substring.slice(s,0,SOME (i + 1))) of
-             SOME (j,_) => (j > 0 andalso
-                            #"*" = Substring.sub(s, j - 1))
-           | _ => false);
-
-(*
-has_language : substring -> bool
-
-Given a code-fenced block as a substring, determine if it has a
-language specified.
- *)
-fun has_language (s : substring) =
-    Substring.size(s) > 0 andalso
-    not (Char.isSpace (Substring.sub(s,0)));
-
-(*
-form_src : string -> string
-
-Forms the source code amalgamated by every code block with a
-language, which are also not "example blocks". A code fenced
-block is considered an "example" if its language name ends in an
-asterisk.
-
-This is almost certainly what you want to call when extracting
-source code from a Markdown file.
-*)
-local
-  fun chop_first_line (ss : substring) =
-      let
-        val (_, keeper) = Substring.splitl (fn c => #"\n" <> c) ss
-      in
-        if 0 = Substring.size keeper
-        then keeper
-        else Substring.triml 1 keeper
-      end
-in
 fun form_src s =
-    let
-      val blocks = gather_code s;
-      val blocks_with_lang = List.filter
-                                 (fn b =>
-                                     (has_language b) andalso
-                                     not (is_example_block b))
-                                 blocks;
-    in
-      Substring.concat
-          (map chop_first_line blocks_with_lang)
-    end
+  let
+    val chunks = List.filter (fn chunk =>
+                                 Chunk.has_language chunk andalso
+                                 not (Chunk.is_example chunk))
+                             (get_chunks s);
+  in
+    Substring.concat (map Chunk.code chunks)
+  end;
+
+(* collate_chunks : Chunk.t list -> Chunk.t list list
+
+Produces a collection of a list of chunks in the same file,
+presented in the same order as given. *)
+local
+  fun name chunk = Metadata.get (Chunk.metadata chunk)
+                                "name";
+  (* Take the initial sublist of items which share the same name *)
+  fun take_with_names n [] acc = (rev acc, [])
+    | take_with_names n (chunks as (c::cs)) acc =
+      if name c = n orelse name c = NONE
+      then take_with_names n cs (c::acc)
+      else (rev acc, cs);
+  fun iter acc [] = acc
+    | iter acc chunks =
+      let
+        val (cs,rest) = take_with_names (name (hd chunks)) chunks [];
+        val acc' = map (fn coll =>
+                           if (name (hd coll)) = (name (hd cs))
+                           then coll @ cs
+                           else coll)
+                       acc;
+      in
+        iter acc' rest
+      end;
+in
+fun collate_chunks (chunks : Chunk.t list) =
+  iter [] chunks
 end;
+
+fun collate_src_chunks chunks =
+  collate_chunks (List.filter (not o Chunk.is_example) chunks);
+

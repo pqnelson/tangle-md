@@ -20,6 +20,24 @@ but we're getting there...
 This is released under the MIT License, which should be available in the
 [LICENSE](./LICENSE) file.
 
+# Usage
+
+There are a few supported metadata fields supported:
+
+- `example` will toggle a codefenced block as an "example", i.e., not
+  included for export as sourcecode --- this is the same as adding a
+  `*` suffix to the language name.
+- `file = filename` will export the current codefenced environment
+  (and all future codefenced environments) to the file
+  "filename". When another codefenced block is encountered with
+  another `file = different_filename`, the output will be redirected.
+  If later a codefenced environment has `file = filename`, then the
+  code chunks are **appended** to the code chunks which will be
+  directed towards file "filename".
+  
+A codefence block has its first line be `` ```language
+{metadata-field-1=value-1, ...}``.
+
 # About
 
 This is part of a larger ecosystem of tools. For example, I intend to

@@ -15,7 +15,7 @@ fun mk_tangle_test name (expected : string) (input : string list)
 val tangle_test1 =
   mk_tangle_test
     "tangle_test1"
-    (concat ["fun has_language (s : substring) =\n"
+    (concat ["\nfun has_language (s : substring) =\n"
             ,"    Substring.size(s) > 0 andalso\n"
             ,"    not (Char.isSpace (Substring.sub(s,0)));\n"])
     ["This is an example\n"

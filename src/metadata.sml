@@ -40,6 +40,13 @@ fun trim_substr_trailing s =
 fun trim_substr s =
   trim_substr_trailing (trim_substr_leading s);
 
+fun find_non_ws (s : substring) i =
+  case CharVectorSlice.findi (fn (_,c) =>
+                                 not (Char.isSpace c))
+                             (Substring.slice(s, i, NONE)) of
+      NONE => Substring.size s
+    | SOME (j,c) => i + j;
+
 (* extract_kvs : substring -> int -> ((key * value) list) * int
 *)
 
@@ -66,14 +73,15 @@ fun extract_kvs s start =
                          #"'" = Substring.sub(s,i)
                       then 1
                       else 0;
-                      
+    (* extracting a "key" or "value" is the same logic, which
+       is described here as `extract_entry` *)
     fun extract_entry i =
       if len <= i
       then (if not (Substring.isSuffix "}" s)
             then raise Runaway "Runaway key-value metadata in code block"
             else (Substring.full "", len))
       else if Char.isSpace (Substring.sub(s,i))
-      then extract_entry (i + 1)
+      then extract_entry (find_non_ws s i)
       else (case CharVectorSlice.findi (end_delim i) s of
                 NONE => raise Runaway "Runaway key-value metadata in code block"
               | SOME (j,c) => 
@@ -83,20 +91,25 @@ fun extract_kvs s start =
                   (Substring.slice(s, i + ell, SOME((j - i) - ell))
                   , j + ell)
                 end);
+    (* extract_iter will accumulate a key-value pair until
+       we're done, or we have a runaway exception thrown. *)
     fun extract_iter idx acc =
       if (len <= idx) 
       then (acc, Int.min(idx + 1, len))
       else if idx > 0 andalso (#"}" = Substring.sub(s,idx - 1))
       then (acc, Int.min(idx, len))
-      else let
+      else let (* step 1: extract key *)
         val (ent,i) = extract_entry idx;
         val entity = trim_substr ent;
         val k = Substring.string entity;
-      in
+      in 
+        (* step 2, case 1: there is no value *)
         if len > i andalso #"," = Substring.sub(s,i)
         then extract_iter (i + 1) ((k, k)::acc)
+        (* step 2, case 2: there is no value AND we're done *)
         else if len > i andalso #"}" = Substring.sub(s,i)
         then ((k, k)::acc, Int.min(i + 1, len))
+        (* step 2, case 3: extract value *)
         else if len > i andalso #"=" = Substring.sub(s,i)
         then let val (rhs,j) = extract_entry (i + 1);
                  val v = (Substring.string o trim_substr) rhs;
@@ -144,13 +157,14 @@ fun parse_kvs s lang_ends_idx =
            SOME _ => (* The "{" began on a newline,
                         it is not metadata! *)
            ([], lang_ends_idx)
-         | NONE => (* I can't remember what this concern was about...
- if Substring.size <= start + 1
-                   then (* stranger things have happened... *)
-                     ([], start)
-                   else
-                   *)
-                     extract_kvs s (start + 1)); 
+         | NONE => extract_kvs s (start + 1)); 
+
+(* lookup : (key * value) list -> key -> value option *)
+fun lookup [] _ = NONE
+  | lookup ((key,value)::kvs) k =
+    if key = k
+    then SOME value
+    else lookup kvs k;
 
 (* from_codefence_block : substring -> Metadata * substring
 
@@ -191,8 +205,10 @@ fun from_codefence_block b =
                            b)
                      else
                        let
-                         val (lang,is_ex) = parse_language b i;
+                         val (lang,is_e) = parse_language b i;
                          val (kvs,j) = parse_kvs b i;
+                         val is_ex = is_e orelse
+                                     NONE <> (lookup kvs "example");
                        in
                          (T { language = SOME lang
                              , is_example = is_ex
@@ -207,13 +223,6 @@ fun language (T {language=lang,...}) = lang;
 
 (* is_example : Metadata -> bool *)
 fun is_example (T {is_example=is_ex,...}) = is_ex;
-
-(* lookup : (key * value) list -> key -> value option *)
-fun lookup [] _ = NONE
-  | lookup ((key,value)::kvs) k =
-    if key = k
-    then SOME value
-    else lookup kvs k;
 
 (* get : Metadata -> key -> value option *)
 fun get (T {kvs,...}) k = lookup kvs k;

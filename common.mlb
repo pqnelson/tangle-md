@@ -1,4 +1,6 @@
 $(SML_LIB)/basis/basis.mlb
 src/metadata.sig
 src/metadata.sml
+src/chunk.sig
+src/chunk.sml
 src/tangle.sml
