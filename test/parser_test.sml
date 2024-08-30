@@ -2,7 +2,8 @@ fun mk_tangle_test name (expected : string) (input : string list)
   : Test.t =
   Test.new name (fn () =>
                     let
-                      val actual = form_src (concat input);
+                      val actual = (Parser.export_src_chunks o
+                                    concat) input;
                       val msg = concat ["EXPECTED: "
                                        , expected
                                        , "\n## ACTUAL: "

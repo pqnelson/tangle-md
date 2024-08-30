@@ -8,13 +8,12 @@ asterisk), then concatenate them all together in order.
 
 WEB-like named code chunks are not supported.
 
-2^32 ~ 4 * (10^3)^6
-
 @author Alex Nelson
 @date 2024 August 24
 @license MIT
 *)
 
+structure Parser :> PARSER = struct
 (*
 next_code_fence : string -> int -> int option
 
@@ -23,18 +22,20 @@ found.
 *)
 fun next_code_fence s pos =
   let
-    val len = size s;
+    val sub = Substring.extract(s,pos,NONE)
+    val len = Substring.size sub;
     fun is_code_fence (i,c) =
-      (i >= pos) andalso
-      (0 = i orelse #"\n" = String.sub(s,i-1)) andalso
+      (if 0 = i then 0 = pos
+       else #"\n" = Substring.sub(sub,i-1)) andalso
       #"`" = c andalso
-      (len > (pos + 2)) andalso
-      (#"`" = String.sub(s, i + 1)) andalso
-      (#"`" = String.sub(s, i + 2));
+      (len > 2 + i) andalso
+      (#"`" = Substring.sub(sub, i + 1)) andalso
+      (#"`" = Substring.sub(sub, i + 2));
   in
-    case (CharVector.findi is_code_fence s) of
+    case (CharVectorSlice.findi is_code_fence
+                                (Substring.extract(s,pos,NONE))) of
         NONE => NONE
-      | SOME(i,_) => SOME(i)
+      | SOME(i,_) => SOME(i + pos)
   end;
 
 (*
@@ -86,16 +87,30 @@ val get_chunks =
   (map ((Chunk.from) o (Metadata.from_codefence_block))) o
   all_code_blocks;
 
-(* form_src : string -> string
+(* export_src_chunks : string -> string
 
-For a string representing a Markdown file, produce a string
-consisting of all the code in the file.
+Given a string representation of a literate Markdown web file,
+extract the Chunks with a language (and which are not
+examples), then flatten them into a string for
+export.
  *)
-val form_src =
+val export_src_chunks =
   Substring.concat o (map Chunk.code) o
   (List.filter (fn chunk =>
                    Chunk.has_language chunk andalso
                    not (Chunk.is_example chunk))) o
+  get_chunks;
+
+
+(* export_all_chunks : string -> string
+
+Given a string representation of a literate Markdown web file,
+extract the Chunks --- with our without a language, which are
+or are not examples --- and then flatten them into a string
+for export.
+ *)
+val export_all_chunks =
+  Substring.concat o (map Chunk.code) o
   get_chunks;
 
 (* collate_chunks : Chunk.t list -> Chunk.t list list
@@ -116,11 +131,15 @@ local
     | iter acc chunks =
       let
         val (cs,rest) = take_with_name (name (hd chunks)) chunks [];
-        val acc' = map (fn coll =>
-                           if (name (hd coll)) = (name (hd cs))
-                           then coll @ cs
-                           else coll)
-                       acc;
+        val n = name (hd chunks);
+        val (acc',added) =
+          foldr (fn (coll, (acc'', added)) =>
+                    if (not added) andalso (name (hd coll)) = n
+                    then ((coll @ chunks) :: acc'', true)
+                    else (coll :: acc'', added))
+                ([], false)
+                acc;
+        val acc' = if added then acc' else (chunks :: acc');
       in
         iter acc' rest
       end;
@@ -132,4 +151,13 @@ end;
 val collate_src_chunks =
   collate_chunks o (List.filter (not o Chunk.is_example));
 
+(* parse : string -> Chunk.t list list
+
+Given a string representation for a literate Markdown web,
+extract the Code chunks and collate them.
+ *)
+fun parse (s : string) =
+  (collate_src_chunks o get_chunks) s;
+
+end;
 (* TODO: flatten ("untangle"?) the chunk inclusions *)
