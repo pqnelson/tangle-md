@@ -12,8 +12,14 @@ type Metadata = t;
 
 exception Runaway of string;
 
-fun is_blank (s : substring) =
-  CharVectorSlice.all (Char.isSpace) s;
+(* lookup : (key * value) list -> key -> value option *)
+fun lookup [] _ = NONE
+  | lookup ((key,value)::kvs) k = if key = k
+                                  then SOME value
+                                  else lookup kvs k;
+
+(* get : Metadata -> key -> value option *)
+fun get (T {kvs,...}) k = lookup kvs k;
 
 (* parse_language : substring -> int -> (string * bool)
 
@@ -47,9 +53,31 @@ fun find_non_ws (s : substring) i =
       NONE => Substring.size s
     | SOME (j,c) => i + j;
 
+(* line : substring -> int
+
+Obtain the line number of a substring, relative to the larger
+[literate Markdown] source file. *)
+fun line (sub : substring) =
+  let
+    val (s,i,sub_len) = Substring.base sub;
+  in
+    length (Substring.fields (fn c => #"\n" = c)
+                             (Substring.extract(s, 0, SOME i)))
+  end;
+
+val line_number = (Int.toString) o line;
+
+fun runaway s i =
+  let
+    val num = line_number (Substring.slice(s, i, NONE))
+  in
+    raise Runaway ("LINE " ^
+                   num ^
+                   " runaway key-value metadata")
+  end;
+
 (* extract_kvs : substring -> int -> ((key * value) list) * int
 *)
-
 fun extract_kvs s start =
   let
     val len = Substring.size s;
@@ -78,12 +106,12 @@ fun extract_kvs s start =
     fun extract_entry i =
       if len <= i
       then (if not (Substring.isSuffix "}" s)
-            then raise Runaway "Runaway key-value metadata in code block"
+            then runaway s i
             else (Substring.full "", len))
       else if Char.isSpace (Substring.sub(s,i))
       then extract_entry (find_non_ws s i)
       else (case CharVectorSlice.findi (end_delim i) s of
-                NONE => raise Runaway "Runaway key-value metadata in code block"
+                NONE => runaway s i
               | SOME (j,c) => 
                 let
                   val ell = delim_len i
@@ -95,7 +123,7 @@ fun extract_kvs s start =
        we're done, or we have a runaway exception thrown. *)
     fun extract_iter idx acc =
       if (len <= idx) 
-      then (acc, Int.min(idx + 1, len))
+      then runaway s 0
       else if idx > 0 andalso (#"}" = Substring.sub(s,idx - 1))
       then (acc, Int.min(idx, len))
       else let (* step 1: extract key *)
@@ -113,16 +141,11 @@ fun extract_kvs s start =
         else if len > i andalso #"=" = Substring.sub(s,i)
         then let val (rhs,j) = extract_entry (i + 1);
                  val v = (Substring.string o trim_substr) rhs;
-             in (case (CharVectorSlice.findi
-                           (fn (ix,ch) =>
-                               ix >= j andalso
-                               not (Char.isSpace ch))
-                           s) of
-                     SOME (j2,cc) => extract_iter (j2+1) ((k,v)::acc)
-                  | NONE => ((k,v)::acc, len - 1))
+             in
+               extract_iter (1 + find_non_ws s j) ((k,v)::acc)
              end
-        else raise Runaway (concat ["Runaway metadata starting at"
-                                   , (Int.toString start)])
+        (* step 2, case 4: raise runaway exception *)
+        else runaway s start
       end;
   in
     extract_iter start []
@@ -159,33 +182,42 @@ fun parse_kvs s lang_ends_idx =
            ([], lang_ends_idx)
          | NONE => extract_kvs s (start + 1)); 
 
-(* lookup : (key * value) list -> key -> value option *)
-fun lookup [] _ = NONE
-  | lookup ((key,value)::kvs) k =
-    if key = k
-    then SOME value
-    else lookup kvs k;
+fun is_blank (s : substring) =
+  CharVectorSlice.all (Char.isSpace) s;
+
+fun trim_firstline (s : substring) = 
+  (case CharVectorSlice.findi (fn (i,c) =>
+                                  not (Char.isSpace c) orelse
+                                  #"\n" = c)
+                              s of
+       NONE => s
+     | SOME(i,_) => Substring.slice(s,i,NONE));
 
 (* from_codefence_block : substring -> Metadata * substring
 
-ASSUME: the substring starts immediately **AFTER** the three
+ASSUME: the substring starts with the first nonwhitespace
+character on the first line immediately **AFTER** the three
 backticks demarcating the start of a code block.
 
 ENSURES: if there is no metadata, the substring returned is
 identical to the given substring.
  *)
-fun from_codefence_block b =
+
+val empty_metadata = T { language = NONE
+                       , is_example = true
+                       , kvs = []
+                       , kvs_size = 0
+                       };
+
+fun from_clean_codefence_block b =
   (case CharVectorSlice.findi (fn (i,c) =>
                                   Char.isSpace c orelse
                                   #"{" = c)
                               b of
-       NONE => (T { language=NONE
-                  , is_example=false
-                  , kvs=[]
-                  , kvs_size=0
-                  },
-                b)
+       NONE => (empty_metadata, b)
      | SOME (0,_) =>
+       (* Since it starts with nonwhitespace, this must be a
+          `#"{"` *)
        let
          val (kvs,j) = parse_kvs b 0;
        in
@@ -197,35 +229,38 @@ fun from_codefence_block b =
           (Substring.slice(b, j, NONE)))
        end
      | SOME (i,_) => if is_blank(Substring.slice(b,0,SOME i))
-                     then (T { language=NONE
-                             , is_example=false
-                             , kvs=[]
-                             , kvs_size=0
-                             },
-                           b)
+                     then (empty_metadata, b)
                      else
                        let
                          val (lang,is_e) = parse_language b i;
                          val (kvs,j) = parse_kvs b i;
                          val is_ex = is_e orelse
-                                     NONE <> (lookup kvs "example");
+                                     (case lookup kvs "example" of
+                                          SOME v => "true" = v
+                                        | NONE => false);
                        in
                          (T { language = SOME lang
-                             , is_example = is_ex
-                             , kvs = kvs
-                             , kvs_size = length kvs
-                             },
+                            , is_example = is_ex
+                            , kvs = kvs
+                            , kvs_size = length kvs
+                            },
                           (Substring.slice(b, j, NONE)))
                        end);
+
+fun from_codefence_block block =
+  let
+    val b = trim_firstline block;
+  in
+    if Substring.isPrefix "\n" block
+    then (empty_metadata, block)
+    else from_clean_codefence_block b
+  end;
 
 (* language : Metadata -> string option *)
 fun language (T {language=lang,...}) = lang;
 
 (* is_example : Metadata -> bool *)
 fun is_example (T {is_example=is_ex,...}) = is_ex;
-
-(* get : Metadata -> key -> value option *)
-fun get (T {kvs,...}) k = lookup kvs k;
 
 fun dbg (T {kvs,...}) =
   "kvs = ["^(concat (map (fn (k,v) => ("("^k^","^v^")")) kvs))^"]";

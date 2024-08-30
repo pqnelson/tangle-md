@@ -36,7 +36,8 @@ There are a few supported metadata fields supported:
   directed towards file "filename".
   
 A codefence block has its first line be `` ```language
-{metadata-field-1=value-1, ...}``.
+{metadata-field-1=value-1, ...}``. Most Markdown engines will
+disregard this, or (at most) use it for syntax highlighting.
 
 # About
 
