@@ -84,7 +84,7 @@ Extract the chunks of code present in a string representing a
 Markdown file. This collects all codefenced blocks, extracts
 the metacode to accompany each Chunk object. *)
 val get_chunks =
-  (map ((Chunk.from) o (Metadata.from_codefence_block))) o
+  rev o (map ((Chunk.from) o (Metadata.from_codefence_block))) o
   all_code_blocks;
 
 (* export_src_chunks : string -> string
@@ -118,30 +118,34 @@ val export_all_chunks =
 Produces a collection of a list of chunks in the same file,
 presented in the same order as given. *)
 local
-  fun name chunk =
-    (Metadata.get (Chunk.metadata chunk) "name",
-     Metadata.get (Chunk.metadata chunk) "file");
   (* Take the initial sublist of items which share the same name *)
-  fun take_with_name n [] acc = (rev acc, [])
-    | take_with_name n (chunks as (c::cs)) acc =
-      if name c = n orelse name c = (NONE,NONE)
-      then take_with_name n cs (c::acc)
+  fun take_with_name chunk acc [] = (rev acc, [])
+    | take_with_name chunk acc (chunks as (c::cs)) =
+      if Chunk.has_no_name c orelse Chunk.same_name chunk c
+      then take_with_name chunk (c::acc) cs
       else (rev acc, cs);
+  (* Append initial segment to same entry of accumulator with
+     same name *)
   fun iter acc [] = acc
-    | iter acc chunks =
+    | iter acc (chunks as chunk::_) =
       let
-        val (cs,rest) = take_with_name (name (hd chunks)) chunks [];
-        val n = name (hd chunks);
+        val (cs,rest) = take_with_name chunk [] chunks;
         val (acc',added) =
           foldr (fn (coll, (acc'', added)) =>
-                    if (not added) andalso (name (hd coll)) = n
-                    then ((coll @ chunks) :: acc'', true)
+                    if (not added) andalso
+                       Chunk.same_name chunk (hd coll)
+                    then (print ("Adding "^
+                                 (Int.toString (length cs))^
+                                 " items\n");
+                          ((coll @ cs) :: acc'', true))
                     else (coll :: acc'', added))
                 ([], false)
                 acc;
-        val acc' = if added then acc' else (chunks :: acc');
+        val acc'' = if added then acc' else (chunks :: acc');
+        val _ = if not added then print "Added nothing in collation?\n"
+                else ();
       in
-        iter acc' rest
+        iter acc'' rest
       end;
 in
 fun collate_chunks (chunks : Chunk.t list) =

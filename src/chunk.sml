@@ -19,4 +19,10 @@ structure Chunk :> CHUNK = struct
 
   fun has_language chunk =
     NONE <> (language chunk);
+
+  fun same_name lhs rhs =
+    Metadata.same_name (metadata lhs) (metadata rhs);
+
+  val has_no_name =
+    Metadata.has_no_name o metadata;
 end;

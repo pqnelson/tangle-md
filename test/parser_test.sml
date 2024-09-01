@@ -55,7 +55,7 @@ val tangle_test2 =
     ,"extract_src ex1;\n"
     ,"```\n"];
 
-Test.register_suite "tangle_test" [
+Test.register_suite "parser_test" [
   tangle_test1
 , tangle_test2
 ];

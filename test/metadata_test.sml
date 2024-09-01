@@ -386,7 +386,100 @@ val get_test18 =
       "key3"
       (SOME "val3");
 
-Test.register_suite "test" [
+(* TODO: unit test `Metadata.same_name` *)
+
+fun mk_same_name_test name expected src1 src2 =
+  Test.new name
+           (fn () =>
+               let
+                 val block1 = Substring.full
+                                  (String.concatWith "\n" src1);
+                 val block2 = Substring.full
+                                  (String.concatWith "\n" src2);
+                 val (metadata1,_) =
+                   Metadata.from_codefence_block block1;
+                 val (metadata2,_) =
+                   Metadata.from_codefence_block block2;
+                 val actual = Metadata.same_name metadata1 metadata2;
+                 val msg = ("EXPECTED: "^
+                            (if expected then "same"
+                             else "different")^
+                            " name, FOUND\nkvs1="^
+                            (Metadata.dbg metadata1)^
+                            "\nkvs2="^
+                            (Metadata.dbg metadata2)^
+                            "\n");
+               in
+                 Assert.!! msg (expected = actual)
+               end);
+
+val same_name_test1 =
+  mk_same_name_test
+      "same_name_test1"
+      true
+      [ "sml {file = chunk.sig, important}"
+      , "random source code here"
+      , "very important"]
+      [ "sml {file = chunk.sig}"
+      , "equally random source code here"
+      , "except not very important"];
+
+val same_name_test2 =
+  mk_same_name_test
+      "same_name_test2"
+      true
+      [ "sml {key1 = val1, file = chunk.sml, important}"
+      , "random source code here"
+      , "very important"]
+      [ "sml {file = chunk.sml, key2 = val2}"
+      , "equally random source code here"
+      , "except not very important"];
+
+val same_name_test3 =
+  mk_same_name_test
+      "same_name_test3"
+      false
+      [ "sml {key1 = val1, file = chunk.sml, important}"
+      , "random source code here"
+      , "very important"]
+      [ "sml {file = chunk.sig, key2 = val2}"
+      , "equally random source code here"
+      , "except not very important"];
+
+val same_name_test4 =
+  mk_same_name_test
+      "same_name_test4"
+      false
+      [ "sml {key1 = val1, file = chunk.sml, important}"
+      , "random source code here"
+      , "very important"]
+      [ "sml {name = 'first step', file = chunk.sml, key2 = val2}"
+      , "equally random source code here"
+      , "except not very important"];
+
+val same_name_test5 =
+  mk_same_name_test
+      "same_name_test5"
+      false
+      [ "sml {key1 = val1, file = chunk.sml, name = important}"
+      , "same file"
+      , "very important"]
+      [ "sml {name = 'first step', file = chunk.sml, key2 = val2}"
+      , "same file but different name"
+      , "should fail"];
+
+val same_name_test6 =
+  mk_same_name_test
+      "same_name_test6"
+      false
+      [ "sml {key1 = val1, file = chunk.sig, name = important}"
+      , "different file"
+      , "very important"]
+      [ "sml {name = important, file = chunk.sml, key2 = val2}"
+      , "same name but different file"
+      , "should fail"];
+
+Test.register_suite "metadata_test" [
   extract_test1
 , extract_test2
 , extract_test3
@@ -413,5 +506,11 @@ Test.register_suite "test" [
 , get_test16
 , get_test17
 , get_test18
+, same_name_test1
+, same_name_test2
+, same_name_test3
+, same_name_test4
+, same_name_test5
+, same_name_test6
 ];
                  

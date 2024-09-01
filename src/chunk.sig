@@ -9,4 +9,6 @@ signature CHUNK = sig
   val is_example : Chunk -> bool;
   val language : Chunk -> string option;
   val has_language : Chunk -> bool;
+  val same_name : Chunk -> Chunk -> bool;
+  val has_no_name : Chunk -> bool;
 end;

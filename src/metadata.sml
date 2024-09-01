@@ -262,6 +262,18 @@ fun language (T {language=lang,...}) = lang;
 (* is_example : Metadata -> bool *)
 fun is_example (T {is_example=is_ex,...}) = is_ex;
 
+fun same_name lhs rhs =
+  let
+    fun name (this : Metadata) = ( get this "file"
+                                 , get this "name");
+  in
+    (name lhs) = (name rhs)
+  end;
+
+fun has_no_name this =
+  (NONE = get this "file") andalso
+  (NONE = get this "name");
+
 fun dbg (T {kvs,...}) =
   "kvs = ["^(concat (map (fn (k,v) => ("("^k^","^v^")")) kvs))^"]";
 
