@@ -25,4 +25,8 @@ structure Chunk :> CHUNK = struct
 
   val has_no_name =
     Metadata.has_no_name o metadata;
+
+  fun eq lhs rhs =
+    (Metadata.eq (metadata lhs) (metadata rhs)) andalso
+    ((Substring.base (code lhs)) = (Substring.base (code rhs)));
 end;

@@ -277,4 +277,9 @@ fun has_no_name this =
 fun dbg (T {kvs,...}) =
   "kvs = ["^(concat (map (fn (k,v) => ("("^k^","^v^")")) kvs))^"]";
 
+fun eq (lhs as T {kvs=kvs_lhs,...}) (rhs as T {kvs=kvs_rhs,...}) =
+  (language lhs = language rhs) andalso
+  (kvs_lhs = kvs_rhs) andalso
+  (is_example lhs = is_example rhs);
+
 end;

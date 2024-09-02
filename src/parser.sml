@@ -113,6 +113,32 @@ val export_all_chunks =
   Substring.concat o (map Chunk.code) o
   get_chunks;
 
+(*
+List.partition implementations:
+
+MLton
+fun partition pred l =
+        let
+           val (pos, neg) =
+              foldl (fn (x, (trues, falses)) =>
+                     if pred x then (x :: trues, falses)
+                     else (trues, x :: falses))
+              ([], []) l
+        in (rev pos, rev neg)
+        end
+
+POLY/ML
+    fun partition _ [] = ([], [])
+      | partition f (a::b) =
+            let
+            val test = f a
+            and (x, y) = partition f b
+            in
+            if test then (a::x, y) else (x, a::y)
+            end
+
+*)
+
 (* collate_chunks : Chunk.t list -> Chunk.t list list
 
 Produces a collection of a list of chunks in the same file,
@@ -120,7 +146,7 @@ presented in the same order as given. *)
 local
   (* Take the initial sublist of items which share the same name *)
   fun take_with_name chunk acc [] = (rev acc, [])
-    | take_with_name chunk acc (chunks as (c::cs)) =
+    | take_with_name chunk acc (c::cs) =
       if Chunk.has_no_name c orelse Chunk.same_name chunk c
       then take_with_name chunk (c::acc) cs
       else (rev acc, cs);
@@ -129,23 +155,16 @@ local
   fun iter acc [] = acc
     | iter acc (chunks as chunk::_) =
       let
-        val (cs,rest) = take_with_name chunk [] chunks;
-        val (acc',added) =
-          foldr (fn (coll, (acc'', added)) =>
-                    if (not added) andalso
-                       Chunk.same_name chunk (hd coll)
-                    then (print ("Adding "^
-                                 (Int.toString (length cs))^
-                                 " items\n");
-                          ((coll @ cs) :: acc'', true))
-                    else (coll :: acc'', added))
-                ([], false)
-                acc;
-        val acc'' = if added then acc' else (chunks :: acc');
-        val _ = if not added then print "Added nothing in collation?\n"
-                else ();
+        val (cs,rest,_) =
+          foldl (fn (c,(acc,rest,in_file)) =>
+                    if (in_file andalso Chunk.has_no_name c) orelse
+                       (Chunk.same_name chunk c)
+                    then (c::acc,rest,true)
+                    else (acc, c::rest,false))
+                ([],[],false)
+                chunks;
       in
-        iter acc'' rest
+        iter ((rev cs)::acc) (rev rest)
       end;
 in
 fun collate_chunks (chunks : Chunk.t list) =
