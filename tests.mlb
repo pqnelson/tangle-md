@@ -3,4 +3,5 @@ common.mlb
 ../sml-xunit/xunit.mlb
 test/parser_test.sml
 test/metadata_test.sml
+test/chunk_test.sml
 src/main.sml

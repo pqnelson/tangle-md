@@ -20,6 +20,11 @@ structure Chunk :> CHUNK = struct
   fun has_language chunk =
     NONE <> (language chunk);
 
+  fun same_language lhs rhs =
+    has_language lhs andalso
+    has_language rhs andalso (* provably symmetric *)
+    language lhs = language rhs;
+
   fun same_name lhs rhs =
     Metadata.same_name (metadata lhs) (metadata rhs);
 
@@ -29,4 +34,9 @@ structure Chunk :> CHUNK = struct
   fun eq lhs rhs =
     (Metadata.eq (metadata lhs) (metadata rhs)) andalso
     ((Substring.base (code lhs)) = (Substring.base (code rhs)));
+
+  fun file this =
+    case (Metadata.get (metadata this) "file") of
+        NONE => ""
+      | SOME f => f;
 end;
