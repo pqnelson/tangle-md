@@ -798,3 +798,9 @@ fun eq (lhs as T {kvs=kvs_lhs,...}) (rhs as T {kvs=kvs_rhs,...}) =
 end;
 ```
 
+
+<footer>
+
+**[** [Parent](../index.md) **|** [Index](./index.md) **|** [Next](./chunk.md) **]**
+
+</footer>

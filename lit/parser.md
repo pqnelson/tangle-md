@@ -2,6 +2,8 @@
 title: Chunk Parser for extracting source code
 ---
 
+# Chunk Parser for extracting source code
+
 We need to parse a literate Markdown web for source code. The tricky
 bit is that code chunks could be directed to different output
 files. Furthermore, we might have "names" for each code chunk.
@@ -203,7 +205,7 @@ val export_all_chunks =
   get_chunks;
 ```
 
-# Collating chunks by name and file
+## Collating chunks by name and file
 
 We want to organize code chunks not only by output file (which is
 important) but also by name. Although we have not yet parsed the code
@@ -290,3 +292,9 @@ I should also think about handling chunk inclusions, when/if we end up
 supporting "named chunks" like WEB and NOWEB. We'll need to flatten
 them at some point. It'll probably be useful to have an actual
 associative array data structure before trying to address that.
+
+<footer>
+
+**[** [Back](./chunk.md) **|** [Parent](../index.md) **|** [Index](./index.md) **|** [Next](./tangle.md) **]**
+
+</footer>

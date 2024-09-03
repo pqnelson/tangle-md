@@ -2,6 +2,8 @@
 title: Tangle main program
 ---
 
+# Main Tangle Program
+
 It is tempting to carve out a library for command line program
 utilities (for argument parsing, printing "help" consistently,
 etc.). I know C has `getopt.h` as well as `argp.h`.
@@ -395,3 +397,9 @@ function. We do so in a separate file aptly named `main.sml`.
 ```sml {file=main.sml}
 val _ = main ();
 ```
+
+<footer>
+
+**[** [Back](./parser.md) **|** [Parent](../index.md) **|** [Index](./index.md) **]**
+
+</footer>

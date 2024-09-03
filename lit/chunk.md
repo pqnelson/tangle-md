@@ -2,6 +2,8 @@
 title: "Chunk" Abstraction
 ---
 
+# "Chunk" Abstraction
+
 We want to form an abstraction around a chunk of code, which will
 track the string of code to be exported **and** the metadata on the
 chunk.
@@ -117,3 +119,9 @@ This just simplifies life when debugging situations.
       | SOME f => f;
 end;
 ```
+
+<footer>
+
+**[** [Back](./metadata.md) **|** [Parent](../index.md) **|** [Index](./index.md) **|** [Next](./parser.md) **]**
+
+</footer>
