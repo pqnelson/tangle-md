@@ -147,20 +147,23 @@ local
   (* Take the initial sublist of items which share the same name *)
   fun take_with_name chunk acc [] = (rev acc, [])
     | take_with_name chunk acc (c::cs) =
-      if Chunk.has_no_name c orelse Chunk.same_name chunk c
+      if Chunk.same_language chunk c andalso
+         (Chunk.has_no_name c orelse Chunk.same_name chunk c)
       then take_with_name chunk (c::acc) cs
       else (rev acc, cs);
   (* Append initial segment to same entry of accumulator with
      same name *)
   fun iter acc [] = acc
-    | iter acc (chunks as chunk::_) =
+    | iter acc (chunks as chunk::chunks_tail) =
       let
         val (cs,rest,_) =
-          foldl (fn (c,(acc,rest,in_file)) =>
-                    if (in_file andalso Chunk.has_no_name c) orelse
-                       (Chunk.same_name chunk c)
-                    then (c::acc,rest,true)
-                    else (acc, c::rest,false))
+          foldl (fn (c,(acc',rest,in_file)) =>
+                    if Chunk.same_language chunk c andalso
+                       ((in_file andalso
+                         Chunk.has_no_name c) orelse
+                        (Chunk.same_name chunk c))
+                    then (c::acc',rest,true)
+                    else (acc', c::rest,false))
                 ([],[],false)
                 chunks;
       in
@@ -180,7 +183,13 @@ Given a string representation for a literate Markdown web,
 extract the Code chunks and collate them.
  *)
 fun parse (s : string) =
-  (collate_src_chunks o get_chunks) s;
-
+  let
+    val results = (collate_src_chunks o get_chunks) s;
+  in
+    (print("Returning "^
+           (Int.toString(length results))^
+           " clusters of chunks\n");
+     results)
+  end;
 end;
 (* TODO: flatten ("untangle"?) the chunk inclusions *)

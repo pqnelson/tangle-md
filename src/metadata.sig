@@ -13,6 +13,7 @@ signature METADATA = sig
 
   val same_name : Metadata -> Metadata -> bool;
   val has_no_name : Metadata -> bool;
+  (* get the key-value pairs as a string, for debugging purposes *)
   val dbg : Metadata -> string;
 
   val eq : Metadata -> Metadata -> bool;

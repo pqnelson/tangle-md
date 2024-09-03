@@ -99,11 +99,6 @@ val collate_chunk_test1 =
             val chunk3 = (Chunk.from o Metadata.from_codefence_block) block;
             val expected = [[chunk2],[chunk1,chunk3]];
             val actual = Parser.collate_chunks [chunk1,chunk2,chunk3];
-            val _ = print ("Actual counts = ");
-            val _ = app (fn coll => print ("["^(Int.toString
-                                                    (length coll))^"]"))
-                        actual;
-            val _ = print "\n";
           in
             Assert.!! "collate_chunks_test1 failed"
                    (chunks_coll_eq expected actual)
@@ -156,19 +151,139 @@ val collate_chunk_test2 =
             val chunk5 = (Chunk.from o Metadata.from_codefence_block) block;
             val expected = [[chunk3,chunk4],[chunk1,chunk2,chunk5]];
             val actual = Parser.collate_chunks [chunk1,chunk2,chunk3,chunk4,chunk5];
-            val _ = print ("Actual counts = ");
-            val _ = app (fn coll => print ("["^(Int.toString
-                                                    (length coll))^"]"))
-                        actual;
-            val _ = print "\n";
           in
             Assert.!! "collate_chunks_test2 failed"
                    (chunks_coll_eq expected actual)
           end);
     
+val collate_chunk_test3 =
+  Test.new
+      "collate_chunk_test3"
+      (fn () =>
+          let
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml {file=foo.sig}"
+                                  ,"This is just some random"
+                                  ,"Text captured between"
+                                  ,"Three backticks"
+              ]);
+            val chunk1 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml"
+                                  ,"fun foo x ="
+                                  ,"  if spam then x else bar x;"
+                                  ,""
+              ]);
+            val chunk2 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml {file=foo.sml}"
+                                  ,"signature FOO = sig"
+                                  ,"  val t;"
+                                  ,"end"
+              ]);
+            val chunk3 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml"
+                                  ,"fun foo_ x ="
+                                  ,"  if spam_ then x else bar__ x;"
+                                  ,""
+              ]);
+            val chunk4 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml"
+                                  ,"structure Foo :> FOO = struct"
+                                  ,"  type t = unit;"
+                                  ,"end;"
+              ]);
+            val chunk5 = (Chunk.from o Metadata.from_codefence_block) block;
+            val expected = [[chunk3,chunk4,chunk5],[chunk1,chunk2]];
+            val actual = Parser.collate_chunks [chunk1,chunk2,chunk3,chunk4,chunk5];
+          in
+            Assert.!! "collate_chunks_test3 failed"
+                   (chunks_coll_eq expected actual)
+          end);
+
+val collate_chunk_test4 =
+  Test.new
+      "collate_chunk_test4"
+      (fn () =>
+          let
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["md"
+                                  ,"This is just some random"
+                                  ,"Text captured between"
+                                  ,"Three backticks"
+              ]);
+            val chunk0 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml {file=foo.sig}"
+                                  ,"This is just some random"
+                                  ,"Text captured between"
+                                  ,"Three backticks"
+              ]);
+            val chunk1 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml"
+                                  ,"fun foo x ="
+                                  ,"  if spam then x else bar x;"
+                                  ,""
+              ]);
+            val chunk2 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml {file=foo.sml}"
+                                  ,"signature FOO = sig"
+                                  ,"  val t;"
+                                  ,"end"
+              ]);
+            val chunk3 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml"
+                                  ,"fun foo_ x ="
+                                  ,"  if spam_ then x else bar__ x;"
+                                  ,""
+              ]);
+            val chunk4 = (Chunk.from o Metadata.from_codefence_block) block;
+            val block = Substring.full (
+                String.concatWith "\n"
+                                  ["sml"
+                                  ,"structure Foo :> FOO = struct"
+                                  ,"  type t = unit;"
+                                  ,"end;"
+              ]);
+            val chunk5 = (Chunk.from o Metadata.from_codefence_block) block;
+            val expected = [[chunk3,chunk4,chunk5],[chunk1,chunk2],[chunk0]];
+            val actual = Parser.collate_chunks [chunk0,chunk1,chunk2,chunk3,chunk4,chunk5];
+            (*
+            val _ = print ("Actual counts = ");
+            val _ = app (fn coll => print ("["^
+                                           (concat (map Chunk.file coll))^
+                                           " "^
+                                           (Int.toString
+                                                    (length coll))^"]"))
+                        actual;
+            val _ = print "\n";
+            *)
+          in
+            Assert.!! "collate_chunks_test4 failed"
+                   (chunks_coll_eq expected actual)
+          end);
+
+
 Test.register_suite "parser_test" [
   tangle_test1
 , tangle_test2
 , collate_chunk_test1
 , collate_chunk_test2
+, collate_chunk_test3
+, collate_chunk_test4
 ];
