@@ -11,8 +11,8 @@ val extract_test1 =
                    ]);
                  val (metadata,s) = Metadata.from_codefence_block block;
                in
-                 Assert.!! "EXPECTED true FOUND false"
-                        (EQUAL = Substring.compare(block, s))
+                 Assert.!! (EQUAL = Substring.compare(block, s))
+                        "EXPECTED true FOUND false"
                end);
 
 val extract_test2 =
@@ -33,11 +33,12 @@ val extract_test2 =
                                    size "sml {file=example.sml}",
                                    NONE);
                in
-                 Assert.!! ("## EXPECTED: \""^
-                            (Substring.string expected)^
-                            "\"\n## FOUND: "^
-                            (Substring.string actual)^"\n")
-                        (EQUAL = Substring.compare(expected, actual))
+                 Assert.!! (EQUAL = Substring.compare(expected, actual))
+                        ("## EXPECTED: \""^
+                         (Substring.string expected)^
+                         "\"\n## FOUND: "^
+                         (Substring.string actual)^"\n")
+                        
                end);
 
 val extract_test3 =
@@ -53,12 +54,10 @@ val extract_test3 =
                  val (metadata,actual) =
                    Metadata.from_codefence_block block;
                in
-                 Assert.!! "EXPECTED exception thrown due to runaway metadata"
-                        false
+                 Assert.!! false "EXPECTED exception thrown due to runaway metadata"
                end
                handle Metadata.Runaway msg =>
-                      (Assert.!! "FOUND exception thrown due to runaway metadata"
-                              true)
+                      (Assert.!! true "FOUND exception thrown due to runaway metadata")
            );
 
 val language_test1 =
@@ -77,8 +76,9 @@ val language_test1 =
                  val expected = "sml";
                  val actual = Option.getOpt(Metadata.language metadata,"wrong");
                in
-                 Assert.!! ("EXPECTED "^expected^"\nFOUND "^actual^"\n")
-                        (expected = actual)
+                 Assert.eq expected
+                           actual
+                           ("EXPECTED "^expected^"\nFOUND "^actual^"\n")
                end);
 
 val language_test2 =
@@ -97,8 +97,9 @@ val language_test2 =
                  val expected = "sml";
                  val actual = Option.getOpt(Metadata.language metadata,"wrong");
                in
-                 Assert.!! ("EXPECTED "^expected^"\nFOUND "^actual^"\n")
-                        (expected = actual)
+                 Assert.eq expected
+                           actual
+                           ("EXPECTED "^expected^"\nFOUND "^actual^"\n")
                end);
 
 val is_example_test1 =
@@ -115,8 +116,8 @@ val is_example_test1 =
                  val (metadata,_) =
                    Metadata.from_codefence_block block;
                in
-                 Assert.!! ("EXPECTED is_example = true\nFOUND ...=false\n")
-                        (Metadata.is_example metadata)
+                 Assert.!! (Metadata.is_example metadata)
+                        ("EXPECTED is_example = true\nFOUND ...=false\n")
                end);
 
 val is_example_test2 =
@@ -133,8 +134,8 @@ val is_example_test2 =
                  val (metadata,_) =
                    Metadata.from_codefence_block block;
                in
-                 Assert.!! ("EXPECTED is_example = false\nFOUND ...=true\n")
-                        (not (Metadata.is_example metadata))
+                 Assert.!! (not (Metadata.is_example metadata))
+                        ("EXPECTED is_example = false\nFOUND ...=true\n")
                end);
 
 val is_example_test3 =
@@ -151,8 +152,8 @@ val is_example_test3 =
                  val (metadata,_) =
                    Metadata.from_codefence_block block;
                in
-                 Assert.!! ("EXPECTED is_example = true\nFOUND ...=false\n")
-                        (Metadata.is_example metadata)
+                 Assert.!! (Metadata.is_example metadata)
+                        ("EXPECTED is_example = true\nFOUND ...=false\n")
                end);
 
 fun mk_get_test name src k expected =
@@ -181,7 +182,7 @@ fun mk_get_test name src k expected =
                              (Metadata.dbg metadata)^
                              "\n"))
                  else ();
-                 Assert.!! msg (expected = actual)
+                 Assert.eq expected actual msg
                end);
 
 val get_test1 =
@@ -410,7 +411,7 @@ fun mk_same_name_test name expected src1 src2 =
                             (Metadata.dbg metadata2)^
                             "\n");
                in
-                 Assert.!! msg (expected = actual)
+                 Assert.eq expected actual msg
                end);
 
 val same_name_test1 =

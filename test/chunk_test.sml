@@ -27,8 +27,7 @@ fun mk_same_test_factory pred printed_key =
                                   , printed_key
                                   , "\n"];
                in
-                 Assert.!! msg
-                        (expected = (pred left right))
+                 Assert.eq expected (pred left right) msg
                end));
 
 val mk_same_name_test =

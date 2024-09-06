@@ -10,7 +10,7 @@ fun mk_tangle_test name (expected : string) (input : string list)
                                        , actual
                                        , "\n"];
                     in
-                      Assert.!! msg (expected = actual)
+                      Assert.eq expected actual msg
                     end);
 
 val tangle_test1 =
@@ -100,8 +100,8 @@ val collate_chunk_test1 =
             val expected = [[chunk2],[chunk1,chunk3]];
             val actual = Parser.collate_chunks [chunk1,chunk2,chunk3];
           in
-            Assert.!! "collate_chunks_test1 failed"
-                   (chunks_coll_eq expected actual)
+            Assert.!! (chunks_coll_eq expected actual)
+                   "collate_chunks_test1 failed"
           end);
     
 val collate_chunk_test2 =
@@ -152,8 +152,8 @@ val collate_chunk_test2 =
             val expected = [[chunk3,chunk4],[chunk1,chunk2,chunk5]];
             val actual = Parser.collate_chunks [chunk1,chunk2,chunk3,chunk4,chunk5];
           in
-            Assert.!! "collate_chunks_test2 failed"
-                   (chunks_coll_eq expected actual)
+            Assert.!! (chunks_coll_eq expected actual)
+                   "collate_chunks_test2 failed"
           end);
     
 val collate_chunk_test3 =
@@ -204,8 +204,8 @@ val collate_chunk_test3 =
             val expected = [[chunk3,chunk4,chunk5],[chunk1,chunk2]];
             val actual = Parser.collate_chunks [chunk1,chunk2,chunk3,chunk4,chunk5];
           in
-            Assert.!! "collate_chunks_test3 failed"
-                   (chunks_coll_eq expected actual)
+            Assert.!! (chunks_coll_eq expected actual)
+                   "collate_chunks_test3 failed"
           end);
 
 val collate_chunk_test4 =
@@ -274,8 +274,8 @@ val collate_chunk_test4 =
             val _ = print "\n";
             *)
           in
-            Assert.!! "collate_chunks_test4 failed"
-                   (chunks_coll_eq expected actual)
+            Assert.!! (chunks_coll_eq expected actual)
+                   "collate_chunks_test4 failed"
           end);
 
 
